@@ -1,7 +1,7 @@
 #!/bin/bash
 # Claude Code status line.
 # Shows: model, context used/remaining %, tokens used vs capacity, and an
-# "over 200k" flag when the context crosses the fixed 200k threshold.
+# "over 300k" flag when the in-window token count crosses 300k.
 # Reads the statusLine JSON from stdin. Requires jq.
 #
 # Field paths (per the Claude Code statusLine schema):
@@ -10,7 +10,12 @@
 #   .context_window.remaining_percentage
 #   .context_window.total_input_tokens
 #   .context_window.context_window_size    (default 200000; 1000000 for extended-context models)
-#   .exceeds_200k_tokens                    (TOP LEVEL, boolean)
+#
+# The flag is computed from total_input_tokens, not the built-in
+# .exceeds_200k_tokens field, because that field is hard-coded to a 200k
+# threshold. Change THRESHOLD below to retarget it.
+
+THRESHOLD=300000
 
 input=$(cat)
 
@@ -20,7 +25,6 @@ REMAIN=$(echo "$input"  | jq -r '.context_window.remaining_percentage // empty' 
 [ -z "$REMAIN" ] && REMAIN=$((100 - USED))
 TOKENS=$(echo "$input"  | jq -r '.context_window.total_input_tokens // 0'   | cut -d. -f1)
 SIZE=$(echo "$input"    | jq -r '.context_window.context_window_size // 200000' | cut -d. -f1)
-EXCEEDS=$(echo "$input" | jq -r '.exceeds_200k_tokens // false')
 
 # Compact token formatter: 15500 -> 16k, 1000000 -> 1M, 1500000 -> 1.5M
 fmt() {
@@ -36,5 +40,5 @@ fmt() {
 }
 
 LINE="[$MODEL] ${USED}% used · ${REMAIN}% left · $(fmt "$TOKENS")/$(fmt "$SIZE")"
-[ "$EXCEEDS" = "true" ] && LINE="$LINE · over 200k"
+[ "$TOKENS" -gt "$THRESHOLD" ] && LINE="$LINE · over $(fmt "$THRESHOLD")"
 echo "$LINE"

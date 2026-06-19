@@ -4,7 +4,7 @@ Two slash commands for Claude Code, plus a status-line script that shows your co
 
 - **`/new-session`** — start-of-session briefing for a project: its open TODO items, plus open action items not yet tracked in the TODO (from CLAUDE.md, project memory, git state, open PRs, and code markers). Read-only.
 - **`/instruct <file>`** — run an instruction file from `~/.claude/instructions/` (or a path): switches to Plan mode, resolves and reads the file, drafts a plan, and waits for your approval before executing.
-- **`statusline.sh`** — prints e.g. `[Opus 4.8] 37% used · 63% left · 74k/200k` (model, context used and remaining percentage, tokens used vs capacity, and an `over 200k` flag when the context crosses the fixed 200k threshold) so your usage is always visible at the bottom of the terminal.
+- **`statusline.sh`** — prints e.g. `[Opus 4.8] 37% used · 63% left · 74k/200k` (model, context used and remaining percentage, tokens used vs capacity, and an `over 300k` flag when the in-window token count crosses 300k) so your usage is always visible at the bottom of the terminal. The threshold is a `THRESHOLD` variable at the top of the script; change it to retarget the flag.
 
 ## Install
 
