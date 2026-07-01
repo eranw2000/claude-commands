@@ -2,6 +2,10 @@
 
 Two slash commands for Claude Code, plus a status-line script that shows your context-window usage continuously.
 
+![claude-commands flow](docs/commands-flow.png)
+
+Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw.io).
+
 - **`/new-session`** — start-of-session briefing for a project: its open TODO items, plus open action items not yet tracked in the TODO (from CLAUDE.md, project memory, git state, open PRs, and code markers). Read-only.
 - **`/instruct <file>`** — run an instruction file from `~/.claude/instructions/` (or a path): switches to Plan mode, resolves and reads the file, drafts a plan, and waits for your approval before executing.
 - **`statusline.sh`** — prints e.g. `[Opus 4.8] claude-commands (main) · 37% used · 63% left · 74k/200k` (model, current directory and git branch, context used and remaining percentage, tokens used vs capacity, and an `over 300k` flag when the in-window token count crosses 300k) so your usage is always visible at the bottom of the terminal. The context percentage is color-coded: green normally, yellow as the window fills, red when nearly full. The thresholds (`THRESHOLD`, `YELLOW_PCT`, `RED_PCT`) are variables at the top of the script; change them to retarget the flag and colors.
