@@ -1,4 +1,5 @@
 ---
+model: fable
 description: Perform the instructions contained in a named instruction file
 argument-hint: <file_name> (a file in ~/.claude/instructions/, or a path)
 ---
