@@ -1,4 +1,5 @@
 ---
+model: sonnet
 description: "Start-of-session briefing: this project's open TODO items, plus open action items not yet tracked in the TODO."
 argument-hint: "[project name] (optional; defaults to the current directory's project)"
 ---
