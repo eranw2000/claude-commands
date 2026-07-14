@@ -2,7 +2,7 @@
 # Claude Code status line.
 # Shows: model, current directory + git branch, context used/remaining %
 # (color-coded green/yellow/red by fill level), tokens used vs capacity, and
-# an "over 300k" flag when the in-window token count crosses 300k.
+# an "over" flag on the in-window token count (yellow past 400k, red past 600k).
 # Reads the statusLine JSON from stdin. Requires jq.
 #
 # Field paths (per the Claude Code statusLine schema):
@@ -14,7 +14,8 @@
 #   .context_window.context_window_size     (default 200000; 1000000 for extended-context models)
 #
 # Tunables:
-THRESHOLD=300000   # token count above which the "over" flag shows
+OVER_YELLOW=400000 # in-window token count above which a yellow "over" flag shows
+OVER_RED=600000    # in-window token count above which the "over" flag turns red
 YELLOW_PCT=40      # used % at/above which the context indicator turns yellow
 RED_PCT=61         # used % at/above which it turns red
 
@@ -56,5 +57,7 @@ fmt() {
 }
 
 LINE="[$MODEL] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · $(fmt "$TOKENS")/$(fmt "$SIZE")"
-[ "$TOKENS" -gt "$THRESHOLD" ] && LINE="$LINE · ${RED}over $(fmt "$THRESHOLD")${RESET}"
+if   [ "$TOKENS" -gt "$OVER_RED" ];    then LINE="$LINE · ${RED}over $(fmt "$OVER_RED")${RESET}"
+elif [ "$TOKENS" -gt "$OVER_YELLOW" ]; then LINE="$LINE · ${YELLOW}over $(fmt "$OVER_YELLOW")${RESET}"
+fi
 echo "$LINE"
