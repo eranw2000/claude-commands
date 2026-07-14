@@ -15,8 +15,8 @@
 #
 # Tunables:
 THRESHOLD=300000   # token count above which the "over" flag shows
-YELLOW_PCT=60      # used % at/above which the context indicator turns yellow
-RED_PCT=85         # used % at/above which it turns red
+YELLOW_PCT=40      # used % at/above which the context indicator turns yellow
+RED_PCT=61         # used % at/above which it turns red
 
 input=$(cat)
 
