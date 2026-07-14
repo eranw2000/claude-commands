@@ -2,7 +2,7 @@
 # Claude Code status line.
 # Shows: model, current directory + git branch, context used/remaining %
 # (color-coded green/yellow/red by fill level), tokens used vs capacity, and
-# an "over" flag on the in-window token count (yellow past 400k, red past 600k).
+# a token gauge: green actual count under 400k, yellow past 400k, red past 600k.
 # Reads the statusLine JSON from stdin. Requires jq.
 #
 # Field paths (per the Claude Code statusLine schema):
@@ -59,5 +59,6 @@ fmt() {
 LINE="[$MODEL] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · $(fmt "$TOKENS")/$(fmt "$SIZE")"
 if   [ "$TOKENS" -gt "$OVER_RED" ];    then LINE="$LINE · ${RED}over $(fmt "$OVER_RED")${RESET}"
 elif [ "$TOKENS" -gt "$OVER_YELLOW" ]; then LINE="$LINE · ${YELLOW}over $(fmt "$OVER_YELLOW")${RESET}"
+else                                        LINE="$LINE · ${GREEN}$(fmt "$TOKENS")${RESET}"
 fi
 echo "$LINE"
