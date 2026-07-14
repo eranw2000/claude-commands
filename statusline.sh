@@ -56,9 +56,11 @@ fmt() {
   fi
 }
 
-LINE="[$MODEL] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · $(fmt "$TOKENS")/$(fmt "$SIZE")"
+# The actual token count shows green while under 400k; past 400k a yellow
+# "over 400k" flag appears, past 600k a red "over 600k".
+if [ "$TOKENS" -gt "$OVER_YELLOW" ]; then GAUGE=""; GAUGE_R=""; else GAUGE=$GREEN; GAUGE_R=$RESET; fi
+LINE="[$MODEL] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · ${GAUGE}$(fmt "$TOKENS")${GAUGE_R}/$(fmt "$SIZE")"
 if   [ "$TOKENS" -gt "$OVER_RED" ];    then LINE="$LINE · ${RED}over $(fmt "$OVER_RED")${RESET}"
 elif [ "$TOKENS" -gt "$OVER_YELLOW" ]; then LINE="$LINE · ${YELLOW}over $(fmt "$OVER_YELLOW")${RESET}"
-else                                        LINE="$LINE · ${GREEN}$(fmt "$TOKENS")${RESET}"
 fi
 echo "$LINE"
