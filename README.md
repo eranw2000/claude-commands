@@ -8,7 +8,7 @@ Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw
 
 - **`/new-session`** — start-of-session briefing for a project: its open TODO items, plus open action items not yet tracked in the TODO (from CLAUDE.md, project memory, git state, open PRs, and code markers). Read-only.
 - **`/instruct <file>`** — run an instruction file from `~/.claude/instructions/` (or a path): switches to Plan mode, resolves and reads the file, drafts a plan, and waits for your approval before executing.
-- **`statusline.sh`** — prints e.g. `[Opus 4.8] claude-commands (main) · 37% used · 63% left · 74k/200k` (model, current directory and git branch, context used and remaining percentage, tokens used vs capacity, and an `over 300k` flag when the in-window token count crosses 300k) so your usage is always visible at the bottom of the terminal. The context percentage is color-coded: green normally, yellow as the window fills, red when nearly full. The thresholds (`THRESHOLD`, `YELLOW_PCT`, `RED_PCT`) are variables at the top of the script; change them to retarget the flag and colors.
+- **`statusline.sh`** — prints e.g. `[Opus 4.8] claude-commands (main) · 37% used · 63% left · 74K/200K` (model, current directory and git branch, context used and remaining percentage, and the in-window token count vs capacity) so your usage is always visible at the bottom of the terminal. Two parts are color-coded. The context percentage is green below 40% used, yellow from 40 to 60%, and red above 60%. The token count is a gauge of the same kind: green while under 400K, a yellow `over 400K` flag once it passes 400K, and a red `over 600K` past 600K (those flags only appear in extended-context sessions, where the window is larger than 400K). The cutoffs (`YELLOW_PCT`, `RED_PCT`, `OVER_YELLOW`, `OVER_RED`) are variables at the top of the script; change them to retarget the colors and flags.
 
 ## Install
 
@@ -43,7 +43,7 @@ The status line replaces the old manual "run /context" step in `/new-session`: i
    }
    ```
 
-Restart Claude Code (or start a new session) and you'll see something like `[Opus 4.8] claude-commands (main) · 37% used · 63% left · 74k/200k` in the status line, with the percentage in green/yellow/red by fill level. The context fields can be null right after start or a `/compact`; the script falls back to `0` until the first API call populates them. The git branch is omitted when the directory isn't a repo.
+Restart Claude Code (or start a new session) and you'll see something like `[Opus 4.8] claude-commands (main) · 37% used · 63% left · 74K/200K` in the status line, with the percentage and token count color-coded green/yellow/red by fill level. The context fields can be null right after start or a `/compact`; the script falls back to `0` until the first API call populates them. The git branch is omitted when the directory isn't a repo.
 
 ## Notes
 
