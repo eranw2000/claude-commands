@@ -43,7 +43,7 @@ elif [ "$USED" -ge "$YELLOW_PCT" ]; then C=$YELLOW
 else                                     C=$GREEN
 fi
 
-# Compact token formatter: 15500 -> 16k, 1000000 -> 1M, 1500000 -> 1.5M
+# Compact token formatter: 15500 -> 16K, 1000000 -> 1M, 1500000 -> 1.5M
 fmt() {
   local n=${1:-0}
   if [ "$n" -ge 1000000 ]; then
@@ -52,12 +52,12 @@ fmt() {
     m=${m%.0}
     printf '%sM' "$m"
   else
-    printf '%dk' $(( (n + 500) / 1000 ))
+    printf '%dK' $(( (n + 500) / 1000 ))
   fi
 }
 
 # The actual token count shows green while under 400k; past 400k a yellow
-# "over 400k" flag appears, past 600k a red "over 600k".
+# "over 400K" flag appears, past 600k a red "over 600K".
 if [ "$TOKENS" -gt "$OVER_YELLOW" ]; then GAUGE=""; GAUGE_R=""; else GAUGE=$GREEN; GAUGE_R=$RESET; fi
 LINE="[$MODEL] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · ${GAUGE}$(fmt "$TOKENS")${GAUGE_R}/$(fmt "$SIZE")"
 if   [ "$TOKENS" -gt "$OVER_RED" ];    then LINE="$LINE · ${RED}over $(fmt "$OVER_RED")${RESET}"
