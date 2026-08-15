@@ -48,7 +48,7 @@ Restart Claude Code (or start a new session) and you'll see something like `[Opu
 ## Notes
 
 - `/new-session` works best if you keep per-project notes under `~/.claude/projects/<X>/` (a `TODO.md` and an optional `CLAUDE.md` / `memory/` folder). It degrades gracefully when those don't exist: it just reports what it can find from git and open PRs. Paths are derived from `$HOME`, so it works on any machine without editing.
-- `/instruct` expects instruction files in `~/.claude/instructions/`. Create that folder and drop `.md` files in it, then run `/instruct <name>`.
+- `/instruct` expects instruction files in `~/.claude/instructions/`. Create that folder and drop `.md` files in it, then run `/instruct <name>`. An instruction file can also take an argument: run `/instruct <path-to-file> <argument>` and everything after the path is passed to the file rather than read as part of its name. Use it for a file written to work on a target you name at call time, such as a plan path, a goal, or a mode.
 - The commands are read-only by design except for one explicit, confirmed action (`/new-session` may offer to append uncaptured items to your `TODO.md`, only after you say yes).
 
 ## License
