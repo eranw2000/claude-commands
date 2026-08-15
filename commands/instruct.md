@@ -1,7 +1,7 @@
 ---
 model: fable
 description: Perform the instructions contained in a named instruction file
-argument-hint: <file_name> (a file in ~/.claude/instructions/, or a path)
+argument-hint: <file_name> (a file in ~/.claude/instructions/, or a path) [argument the file expects]
 ---
 
 Please perform the following instructions: **$ARGUMENTS**
@@ -13,6 +13,7 @@ Resolve the instruction file before doing anything else:
 1. Treat `$ARGUMENTS` as the name of an instruction file. The canonical location is `~/.claude/instructions/`.
 2. Resolve it in this order, stopping at the first hit:
    - If `$ARGUMENTS` is an absolute or relative path that exists, use it as-is.
+   - If `$ARGUMENTS` STARTS with a path that exists and is followed by more text, use that path as the instruction file and treat the remaining text as ARGUMENTS TO IT. An instruction file may be written to take an argument (a plan path, a goal, a mode), so trailing text is that argument rather than part of the filename. Read the file, then apply it to the argument you were given; if the file expects an argument and none was supplied, ask for it rather than choosing one.
    - Otherwise look in `~/.claude/instructions/` for an exact match.
    - If no exact match, append `.md` and try again (`$ARGUMENTS.md`).
    - If still nothing, do a case-insensitive / fuzzy match against the files in `~/.claude/instructions/` (names can contain spaces and mixed case, e.g. `My Feature Spec.md`). Use `ls "$HOME/.claude/instructions/"` to see the options.
