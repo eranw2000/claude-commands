@@ -45,6 +45,36 @@ The status line replaces the old manual "run /context" step in `/new-session`: i
 
 Restart Claude Code (or start a new session) and you'll see something like `[Opus 5] claude-commands (main) · 37% used · 63% left · 74K/200K` in the status line, with the percentage and token count color-coded green/yellow/red by fill level. The context fields can be null right after start or a `/compact`; the script falls back to `0` until the first API call populates them. The git branch is omitted when the directory isn't a repo.
 
+
+#### Skill badges (optional)
+
+The status line can also show a badge naming a skill that just ran, so you can see
+at a glance whether the session has been saved since the last thing you did.
+
+Two badges are configurable near the top of `statusline.sh`:
+
+```bash
+BADGE_A_SKILLS="save-context close-session"
+BADGE_A_LABEL="Session Saved"
+BADGE_B_SKILLS=""
+BADGE_B_LABEL="Workflow Improved"
+```
+
+Each list holds skill or slash-command names exactly as you invoke them, separated
+by spaces. An empty list disables that badge, which is why the second one is off
+until you fill it in.
+
+A badge means its skill is what happened LAST. It appears when the skill runs and
+is withdrawn as soon as the session produces anything that skill did not capture,
+whether that is a message you type, a background task notification, another skill
+being invoked, or any further work after the skill's own turn ended. Running the
+skill again brings the badge back.
+
+The skill's own steps never withdraw its own badge, including a report it prints
+and any agent it spawns. Verdicts are cached per session, and each redraw reads
+only the transcript bytes added since the last one, so a long session costs about
+the same as a short one.
+
 ## Notes
 
 - `/new-session` works best if you keep per-project notes under `~/.claude/projects/<X>/` (a `TODO.md` and an optional `CLAUDE.md` / `memory/` folder). It degrades gracefully when those don't exist: it just reports what it can find from git and open PRs. Paths are derived from `$HOME`, so it works on any machine without editing.
