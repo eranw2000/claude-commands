@@ -12,6 +12,7 @@ Resolve the instruction file before doing anything else:
 
 1. Treat `$ARGUMENTS` as the name of an instruction file. The canonical location is `~/.claude/instructions/`.
 2. Resolve it in this order, stopping at the first hit:
+   - **An intent phrase resolves FIRST, ahead of every path test below.** `$ARGUMENTS` may describe what to DO rather than name an instruction file, and such a phrase normally ENDS with a path of its own. A path test reaches that path first and opens it as the instruction file, which is the wrong file, so match intent before any path rule runs. Match on meaning rather than on exact wording. If a phrase matches no intent, or plausibly matches more than one, fall through to the path rules below and resolve it there. Never invent a default. Add your own intents as further bullets here, each naming what the trailing path means for that intent.
    - If `$ARGUMENTS` is an absolute or relative path that exists, use it as-is.
    - If `$ARGUMENTS` STARTS with a path that exists and is followed by more text, use that path as the instruction file and treat the remaining text as ARGUMENTS TO IT. An instruction file may be written to take an argument (a plan path, a goal, a mode), so trailing text is that argument rather than part of the filename. Read the file, then apply it to the argument you were given; if the file expects an argument and none was supplied, ask for it rather than choosing one.
    - Otherwise look in `~/.claude/instructions/` for an exact match.
