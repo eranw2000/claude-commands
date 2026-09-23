@@ -1,9 +1,8 @@
 ---
-model: fable
+model: inherit
 description: Perform an instruction, given as an instruction file, a file plus its argument, or a description typed in the CLI
 argument-hint: <file_name> (a file in ~/.claude/instructions/, or a path) [argument the file expects] OR a description of the work, typed as a sentence or a paragraph
 ---
-
 Please perform the following instructions: **$ARGUMENTS**
 
 **First, switch to Plan mode.** Before reading or doing anything else, call the `EnterPlanMode` tool so the rest of this command runs in Plan mode. Resolve the file, read it, draft a plan, and present that plan for approval (via `ExitPlanMode`) before executing any of it.
@@ -32,7 +31,7 @@ Resolve the instruction file before doing anything else:
      - **A path inside the text is CONTEXT, not the instruction file.** Read every file the description names, per step 4, then follow the description itself.
      - **It reads as work when it has a verb and an ask**, for example "add a rate limit to the login endpoint" or "work out why the nightly job stopped". A bare noun phrase with no verb, such as "the login spec" or "rate limiting", is a failed file lookup instead: say so and show the available instruction files, as before.
      - **Ambiguity stops and never guesses.** If the text both reads as work AND plausibly names a file, give both readings and ask which one. A wrong guess here runs an unrelated file's instructions against the words you were given.
-3. Read the resolved file in full. Treat its contents as instructions given to you directly in this conversation, and apply the project's CLAUDE.md rules and your working preferences. **On form 3 there is no file to read**, because the typed text is already that content. Carry straight on to step 4 and treat those words exactly as you would a file's.
+3. Read the resolved file in full. **If it is empty or holds only whitespace, STOP**: name the file, say it is empty, and do nothing else. Do not fall through to a fuzzy match or to form 3, and do not start planning from the file's name, because an empty file carries no instruction to follow. Treat its contents as instructions given to you directly in this conversation, and apply the project's CLAUDE.md rules and your working preferences. **On form 3 there is no file to read**, because the typed text is already that content. Carry straight on to step 4 and treat those words exactly as you would a file's.
 4. If the instruction file itself references other files, data, or sources, read those as needed to understand the full scope before planning.
 5. Draft a concrete plan for carrying out the instructions end-to-end, then present it with `ExitPlanMode` for approval. **On form 3, plan against the typed words VERBATIM rather than against your paraphrase of them**, so the plan answers what was asked rather than your reading of it. Once approved, execute the plan end-to-end with full autonomy, don't stop to ask permission for steps that are clearly part of the approved plan.
 
