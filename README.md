@@ -89,7 +89,7 @@ MIT. See [LICENSE](LICENSE).
 
 The commands in this pack pin a Claude Code model alias in their frontmatter, so each artifact runs on the tier its work needs:
 
-- `model: fable`: planning and judgment-heavy review
+- `model: inherit`: planning and judgment-heavy review. These run on your session model, so start a planning or review session on your strongest model (switch with `/model`).
 - `model: opus`: execution and content work
 - `model: sonnet`: routine or mechanical steps
 
