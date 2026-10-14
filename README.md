@@ -1,6 +1,6 @@
 # Claude Code commands
 
-Three slash commands for Claude Code, plus a status-line script that shows your context-window usage continuously.
+Three slash commands and one skill for Claude Code, plus a status-line script that shows your context-window usage continuously.
 
 ![claude-commands flow](docs/commands-flow.png)
 
@@ -9,6 +9,7 @@ Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw
 - **`/new-session`** — start-of-session briefing for a project: its open TODO items, plus open action items not yet tracked in the TODO (from CLAUDE.md, project memory, git state, open PRs, and code markers). Read-only.
 - **`/instruct <file>`**, or **`/instruct <a description of the work>`** — run an instruction file from `~/.claude/instructions/` (or a path), or, when the text matches no file, take the text itself as the instruction. Either way it switches to Plan mode, drafts a plan, and waits for your approval before executing.
 - **`/keep-alive`**: a session timer for long background work. Every 30 minutes it checks the helper agents, background commands and headless runs this session started, and reports them in three lines. Each check is a turn, so it also keeps the session's prompt cache warm while you wait. Once everything has finished and you have not written since the last check, it saves the session with `/save-context` and switches itself off. `/keep-alive stop` ends it early.
+- **`agent-health`** (skill): answers "is the work still moving, and should I wait?" for one project folder. It finds the headless `claude -p` runs started there, their helper agents and child processes, and any background command a session started that has not reported back, and reads the Mac's last wake from sleep so a laptop that was closed does not look like a hang. Each run gets a verdict: WORKING, WAITING, JUST WOKE or STALLED. With `--ping-when-done` it also starts one watcher that shows a macOS notification and plays a sound when the last run in the folder ends. `/keep-alive` uses it on every tick.
 - **`statusline.sh`** — prints e.g. `[Opus 5] claude-commands (main) · 37% used · 63% left · 74K/200K` (model, current directory and git branch, context used and remaining percentage, and the in-window token count vs capacity) so your usage is always visible at the bottom of the terminal. Two parts are color-coded. The context percentage is green below 40% used, yellow from 40 to 60%, and red above 60%. The token count is a gauge of the same kind: green while under 400K, a yellow `over 400K` flag once it passes 400K, and a red `over 600K` past 600K (those flags only appear in extended-context sessions, where the window is larger than 400K). The cutoffs (`YELLOW_PCT`, `RED_PCT`, `OVER_YELLOW`, `OVER_RED`) are variables at the top of the script; change them to retarget the colors and flags. The model shown is the one that actually produced the last reply, read from the session transcript, not just the session setting. A skill or command whose frontmatter pins a different model shows as `[Opus 5→Sonnet 5]` while it is active and reverts on the next plain turn, so a per-turn override is visible instead of silent.
 
 ## Install
@@ -23,6 +24,17 @@ cp commands/*.md ~/.claude/commands/
 ```
 
 They're available immediately as `/new-session`, `/instruct` and `/keep-alive`.
+
+### Skill
+
+Copy the skill folder into your Claude Code skills directory:
+
+```bash
+mkdir -p ~/.claude/skills
+cp -R skills/agent-health ~/.claude/skills/
+```
+
+It needs Python 3 and runs on macOS (it reads `ps`, `lsof` and the `pmset` power log). Ask "are the agents still running?" or "should I wait?" and Claude loads it. Set `AGENT_HEALTH_SOUND` to any sound file to change the finish sound.
 
 ### Status line
 

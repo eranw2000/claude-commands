@@ -14,8 +14,8 @@ it saves the session and switches itself off.
 
 The command has no `model:` pin on purpose. The prompt cache belongs to one model, so a
 tick that ran on another model would read the whole session cold and leave this model's
-cache unrefreshed. For the same reason the save is FOLLOWED from the save-context skill's
-file, never invoked with the Skill tool.
+cache unrefreshed. For the same reason the agent-health and save-context skills are FOLLOWED
+from their files, never invoked with the Skill tool (agent-health is pinned to sonnet).
 
 Argument: `$ARGUMENTS` (blank means `start`).
 
@@ -36,21 +36,24 @@ Argument: `$ARGUMENTS` (blank means `start`).
 Do only this. Start no other work from a tick, and answer with three lines: `Done:` what
 finished, `Now:` what is still running, `You:` what the user must do, or "nothing".
 
-1. **What is still running.** List everything this session started in the background and has
-   not yet seen finish: helper agents (`ListAgents`, and the completion notice each one sends),
-   background shell commands and monitors (a `run_in_background` call with no completion
-   notice yet), and any headless `claude -p` run this session launched (check its process with
-   `ps -axo pid,etime,command`). A watch that this session re-arms after each round (a `wait`
-   loop on a remote job) counts as running while its latest round has no notice.
+1. **What is still running.** Read `~/.claude/skills/agent-health/SKILL.md` in full and follow its
+   steps 1 to 3 as written, including `--ping-when-done` (it arms at most ONE watcher per
+   folder and says `PING ALREADY ARMED` on later ticks, so a repeat tick adds nothing). Note
+   every verdict that is not `NOTHING RUNNING`. Then list what THIS session started in the
+   background and has not yet seen finish: helper agents (`ListAgents`, and the completion
+   notice each one sends) and background shell commands and monitors (a `run_in_background`
+   call with no completion notice yet). A watch that this session re-arms after each round (a
+   `wait` loop on a remote job) counts as running while its latest round has no notice.
 2. **What is half done.** A question still waiting for the user's answer, or a flow stopped
    half way: a rebase or merge in progress, a release between its steps, a failed command
    this session has not dealt with yet.
 3. **Decide.**
-   - **Something needs the user** (a helper or run that failed, one with no new output on two
-     ticks in a row, or anything from step 2): answer with the three lines, the `You:` line
+   - **Something needs the user** (agent-health says `STALLED` on two ticks in a row, a helper
+     or run failed, or anything from step 2): answer with the three lines, the `You:` line
      naming the one action, and stop. Do not save, keep ticking.
-   - **Something is still running** (anything from step 1): answer with the three lines only
-     (`Done:`, `Now:` naming each running item, `You: nothing`). Do not save. Stop.
+   - **Something is still running** (`WORKING`, `WAITING`, `JUST WOKE`, a first `STALLED`, or
+     any running item from step 1): answer with the three lines only (`Done:`, `Now:` naming
+     each running item, `You: nothing`). Do not save. Stop.
    - **Nothing is running and nothing needs the user:** go on.
 4. **Has the user written since the previous tick?** Look for a genuine message from the user
    after the previous `/keep-alive tick` turn. A cron prompt, a task notification, a hook

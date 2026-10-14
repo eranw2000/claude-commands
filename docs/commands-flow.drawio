@@ -5,7 +5,7 @@
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
 
-        <mxCell id="title" value="claude-commands : three slash commands + a status line" style="text;html=1;fontSize=20;fontStyle=1;fontColor=#0050b3;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="900" height="36" as="geometry"/></mxCell>
+        <mxCell id="title" value="claude-commands : three slash commands, one skill + a status line" style="text;html=1;fontSize=20;fontStyle=1;fontColor=#0050b3;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="900" height="36" as="geometry"/></mxCell>
 
         <mxCell id="legend" value="Legend&#10;• green = when it runs&#10;• blue = command step&#10;• orange = output&#10;• gray = always-on status line" style="rounded=0;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=0;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;whiteSpace=wrap;html=1;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="1040" y="70" width="340" height="130" as="geometry"/></mxCell>
 
@@ -24,7 +24,7 @@
         <!-- STAGE 3: /keep-alive -->
         <mxCell id="s3" value="/keep-alive  (session timer while work runs)" style="rounded=0;fillColor=#fafafa;strokeColor=#0050b3;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;dashed=1;strokeWidth=2;html=1;" vertex="1" parent="1"><mxGeometry x="960" y="230" width="420" height="380" as="geometry"/></mxCell>
         <mxCell id="s3t" value="helper agents or background commands still working" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="270" width="340" height="60" as="geometry"/></mxCell>
-        <mxCell id="s3p" value="/keep-alive&#10;every 30 min: check what is still running&#10;(each check keeps the prompt cache warm)" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="370" width="340" height="90" as="geometry"/></mxCell>
+        <mxCell id="s3p" value="/keep-alive&#10;every 30 min: run the agent-health skill&#10;(each check keeps the prompt cache warm)" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="370" width="340" height="90" as="geometry"/></mxCell>
         <mxCell id="s3o" value="all finished: run /save-context, then stop the timer" style="shape=document;fillColor=#ffe6cc;strokeColor=#d79b00;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="500" width="340" height="80" as="geometry"/></mxCell>
 
         <!-- always-on band -->
