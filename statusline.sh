@@ -111,7 +111,13 @@ BADGE_A_LABEL="Session Saved"
 BADGE_B_SKILLS=""
 BADGE_B_LABEL="Workflow Improved"
 #
-# Each badge tracks three byte offsets: where its skill was invoked, where that
+# A third badge, Keep-Alive, needs no setup and follows a different rule, because it
+# names a timer rather than an event: it shows from the CronCreate whose prompt is
+# "/keep-alive tick" until a CronDelete of that same job id (/keep-alive stop, or the
+# tick that saves the session and switches itself off). The id is read from the
+# CronCreate result line ("Scheduled recurring job <id> (...").
+#
+# The two skill badges each track three byte offsets: where the skill was invoked, where that
 # turn ended, and where it was invalidated. It shows while the first is set and
 # the third is not. After the invocation, any of these invalidate it:
 #   - something fed INTO the session: a typed prompt, a slash command, or a
@@ -153,30 +159,32 @@ BADGE_B_LABEL="Workflow Improved"
 # consumed, so a redraw landing mid-write re-reads that line next time instead of
 # losing it. LC_ALL=C keeps awk length() in bytes, which the offsets depend on.
 STATE_DIR="$HOME/.claude/.statusline-state"
-STATE_VERSION=v2
+STATE_VERSION=v3
 
-BADGE_A=""; BADGE_B=""
-if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] && [ -n "$BADGE_A_SKILLS$BADGE_B_SKILLS" ]; then
+BADGE_A=""; BADGE_B=""; BADGE_KA=""
+if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
   STATE="$STATE_DIR/$(basename "$TRANSCRIPT" .jsonl)"
-  VER=""; OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0
+  VER=""; OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; KPEND=0; KID=""
   if [ -f "$STATE" ]; then
     { read -r VER; read -r OFF; read -r AP; read -r AFIN; read -r ABAD
-      read -r BP; read -r BFIN; read -r BBAD; } < "$STATE"
+      read -r BP; read -r BFIN; read -r BBAD; read -r KPEND; read -r KID; } < "$STATE"
   else
     mkdir -p "$STATE_DIR" 2>/dev/null
     # once per session: drop state left behind by sessions long gone
     find "$STATE_DIR" -type f -mtime +14 -delete 2>/dev/null
   fi
   # an older format holds different fields in these slots, so rescan instead
-  [ "$VER" = "$STATE_VERSION" ] || { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; }
-  for v in OFF AP AFIN ABAD BP BFIN BBAD; do
+  [ "$VER" = "$STATE_VERSION" ] || { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0
+                                     KPEND=0; KID=""; }
+  for v in OFF AP AFIN ABAD BP BFIN BBAD KPEND; do
     eval "case \"\$$v\" in ''|*[!0-9]*) $v=0 ;; esac"
   done
+  case "$KID" in *[!0-9a-f]*) KID="" ;; esac
 
   SZ=$(wc -c < "$TRANSCRIPT" 2>/dev/null | tr -d ' ')
   case "$SZ" in ''|*[!0-9]*) SZ=0 ;; esac
   # a shorter file is a different file: start over rather than trust old offsets
-  [ "$OFF" -gt "$SZ" ] && { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; }
+  [ "$OFF" -gt "$SZ" ] && { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; KPEND=0; KID=""; }
 
   if [ "$SZ" -gt "$OFF" ]; then
     COMPLETE=0; [ -z "$(tail -c 1 "$TRANSCRIPT")" ] && COMPLETE=1
@@ -184,7 +192,7 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] && [ -n "$BADGE_A_SKILLS$BADGE_B
       -v pos="$OFF" -v complete="$COMPLETE" \
       -v alist="$BADGE_A_SKILLS" -v blist="$BADGE_B_SKILLS" \
       -v ap="$AP" -v afin="$AFIN" -v abad="$ABAD" \
-      -v bp="$BP" -v bfin="$BFIN" -v bbad="$BBAD" '
+      -v bp="$BP" -v bfin="$BFIN" -v bbad="$BBAD" -v kpend="$KPEND" -v kid="$KID" '
       BEGIN { at["a"]=ap; fin["a"]=afin; bad["a"]=abad; names["a"]=alist
               at["b"]=bp; fin["b"]=bfin; bad["b"]=bbad; names["b"]=blist }
 
@@ -228,7 +236,24 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] && [ -n "$BADGE_A_SKILLS$BADGE_B
           bad[k] = P; return
         }
       }
-      function classify(L, P) { track("a", L, P); track("b", L, P) }
+      # The keep-alive timer. kpend is set by the CronCreate call and settled by
+      # the very next tool result: a "Scheduled recurring job <id>" there sets
+      # kid, anything else (an error) drops it. A CronDelete of kid clears it.
+      function track_ka(L,   s, id) {
+        if (index(L, "\"isSidechain\":true")) return
+        if (index(L, "\"name\":\"CronCreate\",\"input\":") &&
+            index(L, "\"prompt\":\"/keep-alive tick\"")) { kpend = 1; return }
+        if (kpend && index(L, "\"type\":\"tool_result\"")) {
+          kpend = 0
+          s = index(L, "\"content\":\"Scheduled recurring job ")
+          if (!s) return
+          id = substr(L, s + 35); id = substr(id, 1, index(id, " ") - 1)
+          if (id ~ /^[0-9a-f]+$/) kid = id
+          return
+        }
+        if (kid != "" && index(L, "\"name\":\"CronDelete\",\"input\":{\"id\":\"" kid "\"}")) kid = ""
+      }
+      function classify(L, P) { track("a", L, P); track("b", L, P); track_ka(L) }
       # one-record delay: a line is only known complete once another follows it
       { if (have) classify(prev, prevpos); prev = $0; prevpos = pos; have = 1; pos += length($0) + 1 }
       END {
@@ -237,18 +262,21 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] && [ -n "$BADGE_A_SKILLS$BADGE_B
         print pos
         print at["a"]; print fin["a"]; print bad["a"]
         print at["b"]; print fin["b"]; print bad["b"]
+        print kpend + 0; print kid
       }')
     { read -r OFF; read -r AP; read -r AFIN; read -r ABAD
-      read -r BP; read -r BFIN; read -r BBAD; } <<< "$RES"
-    for v in OFF AP AFIN ABAD BP BFIN BBAD; do
+      read -r BP; read -r BFIN; read -r BBAD; read -r KPEND; read -r KID; } <<< "$RES"
+    for v in OFF AP AFIN ABAD BP BFIN BBAD KPEND; do
       eval "case \"\$$v\" in ''|*[!0-9]*) $v=0 ;; esac"
     done
-    printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' "$STATE_VERSION" \
-      "$OFF" "$AP" "$AFIN" "$ABAD" "$BP" "$BFIN" "$BBAD" > "$STATE" 2>/dev/null
+    case "$KID" in *[!0-9a-f]*) KID="" ;; esac
+    printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' "$STATE_VERSION" \
+      "$OFF" "$AP" "$AFIN" "$ABAD" "$BP" "$BFIN" "$BBAD" "$KPEND" "$KID" > "$STATE" 2>/dev/null
   fi
 
   [ "$AP" -gt 0 ] && [ "$ABAD" -eq 0 ] && BADGE_A=1
   [ "$BP" -gt 0 ] && [ "$BBAD" -eq 0 ] && BADGE_B=1
+  [ -n "$KID" ] && BADGE_KA=1
 fi
 
 # The actual token count shows green while under 400k; past 400k a yellow
@@ -259,6 +287,7 @@ if   [ "$TOKENS" -gt "$OVER_RED" ];    then LINE="$LINE · ${RED}over $(fmt "$OV
 elif [ "$TOKENS" -gt "$OVER_YELLOW" ]; then LINE="$LINE · ${YELLOW}over $(fmt "$OVER_YELLOW")${RESET}"
 fi
 BOLDBLUE=$'\033[1;34m'
+[ -n "$BADGE_KA" ] && LINE="$LINE · ${BOLDBLUE}Keep-Alive${RESET}"
 [ -n "$BADGE_A" ] && LINE="$LINE · ${BOLDBLUE}${BADGE_A_LABEL}${RESET}"
 [ -n "$BADGE_B" ] && LINE="$LINE · ${BOLDBLUE}${BADGE_B_LABEL}${RESET}"
 echo "$LINE"

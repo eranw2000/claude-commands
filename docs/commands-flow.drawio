@@ -1,13 +1,13 @@
 <mxfile host="app.diagrams.net" type="device">
   <diagram name="claude-commands" id="cmdflow">
-    <mxGraphModel dx="1400" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1360" pageHeight="720" math="0" shadow="0">
+    <mxGraphModel dx="1400" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="720" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
 
-        <mxCell id="title" value="claude-commands : two slash commands + a status line" style="text;html=1;fontSize=20;fontStyle=1;fontColor=#0050b3;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="900" height="36" as="geometry"/></mxCell>
+        <mxCell id="title" value="claude-commands : three slash commands + a status line" style="text;html=1;fontSize=20;fontStyle=1;fontColor=#0050b3;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="900" height="36" as="geometry"/></mxCell>
 
-        <mxCell id="legend" value="Legend&#10;• green = when it runs&#10;• blue = command step&#10;• orange = output&#10;• gray = always-on status line" style="rounded=0;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=0;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;whiteSpace=wrap;html=1;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="960" y="70" width="340" height="130" as="geometry"/></mxCell>
+        <mxCell id="legend" value="Legend&#10;• green = when it runs&#10;• blue = command step&#10;• orange = output&#10;• gray = always-on status line" style="rounded=0;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=0;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;whiteSpace=wrap;html=1;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="1040" y="70" width="340" height="130" as="geometry"/></mxCell>
 
         <!-- STAGE 1: /new-session -->
         <mxCell id="s1" value="/new-session  (start-of-session briefing)" style="rounded=0;fillColor=#fafafa;strokeColor=#0050b3;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;dashed=1;strokeWidth=2;html=1;" vertex="1" parent="1"><mxGeometry x="40" y="230" width="420" height="380" as="geometry"/></mxCell>
@@ -21,14 +21,22 @@
         <mxCell id="s2p" value="/instruct [name]&#10;read ~/.claude/instructions/[name].md" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="540" y="370" width="340" height="90" as="geometry"/></mxCell>
         <mxCell id="s2o" value="perform the file's steps in order" style="shape=document;fillColor=#ffe6cc;strokeColor=#d79b00;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="540" y="500" width="340" height="80" as="geometry"/></mxCell>
 
+        <!-- STAGE 3: /keep-alive -->
+        <mxCell id="s3" value="/keep-alive  (session timer while work runs)" style="rounded=0;fillColor=#fafafa;strokeColor=#0050b3;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;dashed=1;strokeWidth=2;html=1;" vertex="1" parent="1"><mxGeometry x="960" y="230" width="420" height="380" as="geometry"/></mxCell>
+        <mxCell id="s3t" value="helper agents or background commands still working" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="270" width="340" height="60" as="geometry"/></mxCell>
+        <mxCell id="s3p" value="/keep-alive&#10;every 30 min: check what is still running&#10;(each check keeps the prompt cache warm)" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="370" width="340" height="90" as="geometry"/></mxCell>
+        <mxCell id="s3o" value="all finished: run /save-context, then stop the timer" style="shape=document;fillColor=#ffe6cc;strokeColor=#d79b00;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1000" y="500" width="340" height="80" as="geometry"/></mxCell>
+
         <!-- always-on band -->
-        <mxCell id="band" value="statusline.sh (always on): renders live context-window usage % in the Claude Code status line, every turn" style="rounded=0;fillColor=#eeeeee;strokeColor=#999999;html=1;whiteSpace=wrap;fontStyle=2;dashed=1;verticalAlign=middle;align=center;" vertex="1" parent="1"><mxGeometry x="40" y="640" width="880" height="50" as="geometry"/></mxCell>
+        <mxCell id="band" value="statusline.sh (always on): renders live context-window usage % in the Claude Code status line, every turn, plus a Keep-Alive badge while the /keep-alive timer runs" style="rounded=0;fillColor=#eeeeee;strokeColor=#999999;html=1;whiteSpace=wrap;fontStyle=2;dashed=1;verticalAlign=middle;align=center;" vertex="1" parent="1"><mxGeometry x="40" y="640" width="1340" height="50" as="geometry"/></mxCell>
 
         <!-- edges -->
         <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeColor=#82b366;strokeWidth=2;html=1;" edge="1" parent="1" source="s1t" target="s1p"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeColor=#0050b3;strokeWidth=2;html=1;" edge="1" parent="1" source="s1p" target="s1o"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeColor=#82b366;strokeWidth=2;html=1;" edge="1" parent="1" source="s2t" target="s2p"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeColor=#0050b3;strokeWidth=2;html=1;" edge="1" parent="1" source="s2p" target="s2o"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeColor=#82b366;strokeWidth=2;html=1;" edge="1" parent="1" source="s3t" target="s3p"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeColor=#0050b3;strokeWidth=2;html=1;" edge="1" parent="1" source="s3p" target="s3o"><mxGeometry relative="1" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>
   </diagram>
