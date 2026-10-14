@@ -116,6 +116,8 @@ BADGE_B_LABEL="Workflow Improved"
 # "/keep-alive tick" until a CronDelete of that same job id (/keep-alive stop, or the
 # tick that saves the session and switches itself off). The id is read from the
 # CronCreate result line ("Scheduled recurring job <id> (...").
+# A /keep-alive turn never withdraws the two skill badges: it only checks on work, so a
+# save stays visible while the timer ticks.
 #
 # The two skill badges each track three byte offsets: where the skill was invoked, where that
 # turn ended, and where it was invalidated. It shows while the first is set and
@@ -159,15 +161,15 @@ BADGE_B_LABEL="Workflow Improved"
 # consumed, so a redraw landing mid-write re-reads that line next time instead of
 # losing it. LC_ALL=C keeps awk length() in bytes, which the offsets depend on.
 STATE_DIR="$HOME/.claude/.statusline-state"
-STATE_VERSION=v3
+STATE_VERSION=v4
 
 BADGE_A=""; BADGE_B=""; BADGE_KA=""
 if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
   STATE="$STATE_DIR/$(basename "$TRANSCRIPT" .jsonl)"
-  VER=""; OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; KPEND=0; KID=""
+  VER=""; OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; KPEND=0; KID=""; KTURN=0
   if [ -f "$STATE" ]; then
     { read -r VER; read -r OFF; read -r AP; read -r AFIN; read -r ABAD
-      read -r BP; read -r BFIN; read -r BBAD; read -r KPEND; read -r KID; } < "$STATE"
+      read -r BP; read -r BFIN; read -r BBAD; read -r KPEND; read -r KID; read -r KTURN; } < "$STATE"
   else
     mkdir -p "$STATE_DIR" 2>/dev/null
     # once per session: drop state left behind by sessions long gone
@@ -175,8 +177,8 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
   fi
   # an older format holds different fields in these slots, so rescan instead
   [ "$VER" = "$STATE_VERSION" ] || { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0
-                                     KPEND=0; KID=""; }
-  for v in OFF AP AFIN ABAD BP BFIN BBAD KPEND; do
+                                     KPEND=0; KID=""; KTURN=0; }
+  for v in OFF AP AFIN ABAD BP BFIN BBAD KPEND KTURN; do
     eval "case \"\$$v\" in ''|*[!0-9]*) $v=0 ;; esac"
   done
   case "$KID" in *[!0-9a-f]*) KID="" ;; esac
@@ -184,7 +186,7 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
   SZ=$(wc -c < "$TRANSCRIPT" 2>/dev/null | tr -d ' ')
   case "$SZ" in ''|*[!0-9]*) SZ=0 ;; esac
   # a shorter file is a different file: start over rather than trust old offsets
-  [ "$OFF" -gt "$SZ" ] && { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; KPEND=0; KID=""; }
+  [ "$OFF" -gt "$SZ" ] && { OFF=0; AP=0; AFIN=0; ABAD=0; BP=0; BFIN=0; BBAD=0; KPEND=0; KID=""; KTURN=0; }
 
   if [ "$SZ" -gt "$OFF" ]; then
     COMPLETE=0; [ -z "$(tail -c 1 "$TRANSCRIPT")" ] && COMPLETE=1
@@ -192,7 +194,7 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
       -v pos="$OFF" -v complete="$COMPLETE" \
       -v alist="$BADGE_A_SKILLS" -v blist="$BADGE_B_SKILLS" \
       -v ap="$AP" -v afin="$AFIN" -v abad="$ABAD" \
-      -v bp="$BP" -v bfin="$BFIN" -v bbad="$BBAD" -v kpend="$KPEND" -v kid="$KID" '
+      -v bp="$BP" -v bfin="$BFIN" -v bbad="$BBAD" -v kpend="$KPEND" -v kid="$KID" -v kturn="$KTURN" '
       BEGIN { at["a"]=ap; fin["a"]=afin; bad["a"]=abad; names["a"]=alist
               at["b"]=bp; fin["b"]=bfin; bad["b"]=bbad; names["b"]=blist }
 
@@ -213,6 +215,7 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
           at[k] = P; fin[k] = 0; bad[k] = 0; return
         }
         if (at[k] == 0 || bad[k] > 0) return
+        if (kturn) return
         # 2. something fed into the session
         if (index(L, "\"role\":\"user\",\"content\":\"") && !index(L, "\"isMeta\":true")) {
           bad[k] = P; return
@@ -253,7 +256,14 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
         }
         if (kid != "" && index(L, "\"name\":\"CronDelete\",\"input\":{\"id\":\"" kid "\"}")) kid = ""
       }
-      function classify(L, P) { track("a", L, P); track("b", L, P); track_ka(L) }
+      # A /keep-alive prompt (start, tick or stop) opens a keep-alive turn; anything else fed
+      # into the session (a typed prompt, a task notification) closes it.
+      function classify(L, P) {
+        if (index(L, "\"role\":\"user\",\"content\":\"") && !index(L, "\"isMeta\":true"))
+          kturn = (index(L, "\"content\":\"<command-message>keep-alive</command-message>") ||
+                   index(L, "\"content\":\"<command-name>/keep-alive</command-name>")) ? 1 : 0
+        track("a", L, P); track("b", L, P); track_ka(L)
+      }
       # one-record delay: a line is only known complete once another follows it
       { if (have) classify(prev, prevpos); prev = $0; prevpos = pos; have = 1; pos += length($0) + 1 }
       END {
@@ -262,16 +272,16 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
         print pos
         print at["a"]; print fin["a"]; print bad["a"]
         print at["b"]; print fin["b"]; print bad["b"]
-        print kpend + 0; print kid
+        print kpend + 0; print kid; print kturn + 0
       }')
     { read -r OFF; read -r AP; read -r AFIN; read -r ABAD
-      read -r BP; read -r BFIN; read -r BBAD; read -r KPEND; read -r KID; } <<< "$RES"
-    for v in OFF AP AFIN ABAD BP BFIN BBAD KPEND; do
+      read -r BP; read -r BFIN; read -r BBAD; read -r KPEND; read -r KID; read -r KTURN; } <<< "$RES"
+    for v in OFF AP AFIN ABAD BP BFIN BBAD KPEND KTURN; do
       eval "case \"\$$v\" in ''|*[!0-9]*) $v=0 ;; esac"
     done
     case "$KID" in *[!0-9a-f]*) KID="" ;; esac
-    printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' "$STATE_VERSION" \
-      "$OFF" "$AP" "$AFIN" "$ABAD" "$BP" "$BFIN" "$BBAD" "$KPEND" "$KID" > "$STATE" 2>/dev/null
+    printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' "$STATE_VERSION" \
+      "$OFF" "$AP" "$AFIN" "$ABAD" "$BP" "$BFIN" "$BBAD" "$KPEND" "$KID" "$KTURN" > "$STATE" 2>/dev/null
   fi
 
   [ "$AP" -gt 0 ] && [ "$ABAD" -eq 0 ] && BADGE_A=1

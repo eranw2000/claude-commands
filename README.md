@@ -88,6 +88,10 @@ is running: from the moment the command creates its timer until that same timer 
 deleted, by `/keep-alive stop` or by the last check, which saves the session and
 switches itself off.
 
+A `/keep-alive` turn (start, tick or stop) never withdraws the two skill badges.
+It only checks on work, so a `Session Saved` badge stays visible while the timer
+ticks, until you type something or a background task reports back.
+
 The skill's own steps never withdraw its own badge, including a report it prints
 and any agent it spawns. Verdicts are cached per session, and each redraw reads
 only the transcript bytes added since the last one, so a long session costs about
