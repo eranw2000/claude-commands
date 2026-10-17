@@ -21,9 +21,11 @@ Copy the command files into your Claude Code commands directory:
 ```bash
 mkdir -p ~/.claude/commands
 cp commands/*.md ~/.claude/commands/
+mkdir -p ~/.claude/skills/_shared
+cp skills/_shared/branch_state.py ~/.claude/skills/_shared/
 ```
 
-They're available immediately as `/new-session`, `/instruct` and `/keep-alive`.
+They're available immediately as `/new-session`, `/instruct` and `/keep-alive`. `/new-session` runs `branch_state.py` to name the branch a checkout is on and to compare local main with its remote separately from that branch.
 
 ### Skill
 
