@@ -1,6 +1,6 @@
 # Claude Code commands
 
-Two slash commands for Claude Code, plus a status-line script that shows your context-window usage continuously.
+Three slash commands and one skill for Claude Code, plus a status-line script that shows your context-window usage continuously.
 
 ![claude-commands flow](docs/commands-flow.png)
 
@@ -8,6 +8,8 @@ Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw
 
 - **`/new-session`** — start-of-session briefing for a project: its open TODO items, plus open action items not yet tracked in the TODO (from CLAUDE.md, project memory, git state, open PRs, and code markers). Read-only.
 - **`/instruct <file>`**, or **`/instruct <a description of the work>`** — run an instruction file from `~/.claude/instructions/` (or a path), or, when the text matches no file, take the text itself as the instruction. Either way it switches to Plan mode, drafts a plan, and waits for your approval before executing.
+- **`/keep-alive`**: a session timer for long background work. Every 30 minutes it checks the helper agents, background commands and headless runs this session started, and reports them in three lines. Each check is a turn, so it also keeps the session's prompt cache warm while you wait. Once everything has finished and you have not written since the last check, it saves the session with `/save-context` and switches itself off. `/keep-alive stop` ends it early.
+- **`agent-health`** (skill): answers "is the work still moving, and should I wait?" for one project folder. It finds the headless `claude -p` runs started there, their helper agents and child processes, and any background command a session started that has not reported back, and reads the Mac's last wake from sleep so a laptop that was closed does not look like a hang. Each run gets a verdict: WORKING, WAITING, JUST WOKE or STALLED. With `--ping-when-done` it also starts one watcher that shows a macOS notification and plays a sound when the last run in the folder ends. `/keep-alive` uses it on every tick.
 - **`statusline.sh`** — prints e.g. `[Opus 5] claude-commands (main) · 37% used · 63% left · 74K/200K` (model, current directory and git branch, context used and remaining percentage, and the in-window token count vs capacity) so your usage is always visible at the bottom of the terminal. Two parts are color-coded. The context percentage is green below 40% used, yellow from 40 to 60%, and red above 60%. The token count is a gauge of the same kind: green while under 400K, a yellow `over 400K` flag once it passes 400K, and a red `over 600K` past 600K (those flags only appear in extended-context sessions, where the window is larger than 400K). The cutoffs (`YELLOW_PCT`, `RED_PCT`, `OVER_YELLOW`, `OVER_RED`) are variables at the top of the script; change them to retarget the colors and flags. The model shown is the one that actually produced the last reply, read from the session transcript, not just the session setting. A skill or command whose frontmatter pins a different model shows as `[Opus 5→Sonnet 5]` while it is active and reverts on the next plain turn, so a per-turn override is visible instead of silent.
 
 ## Install
@@ -21,7 +23,18 @@ mkdir -p ~/.claude/commands
 cp commands/*.md ~/.claude/commands/
 ```
 
-They're available immediately as `/new-session` and `/instruct`.
+They're available immediately as `/new-session`, `/instruct` and `/keep-alive`.
+
+### Skill
+
+Copy the skill folder into your Claude Code skills directory:
+
+```bash
+mkdir -p ~/.claude/skills
+cp -R skills/agent-health ~/.claude/skills/
+```
+
+It needs Python 3 and runs on macOS (it reads `ps`, `lsof` and the `pmset` power log). Ask "are the agents still running?" or "should I wait?" and Claude loads it. Set `AGENT_HEALTH_SOUND` to any sound file to change the finish sound.
 
 ### Status line
 
@@ -70,6 +83,15 @@ whether that is a message you type, a background task notification, another skil
 being invoked, or any further work after the skill's own turn ended. Running the
 skill again brings the badge back.
 
+A third badge, **Keep-Alive**, needs no setup. It shows while the `/keep-alive` timer
+is running: from the moment the command creates its timer until that same timer is
+deleted, by `/keep-alive stop` or by the last check, which saves the session and
+switches itself off.
+
+A `/keep-alive` turn (start, tick or stop) never withdraws the two skill badges.
+It only checks on work, so a `Session Saved` badge stays visible while the timer
+ticks, until you type something or a background task reports back.
+
 The skill's own steps never withdraw its own badge, including a report it prints
 and any agent it spawns. Verdicts are cached per session, and each redraw reads
 only the transcript bytes added since the last one, so a long session costs about
@@ -79,6 +101,7 @@ the same as a short one.
 
 - `/new-session` works best if you keep per-project notes under `~/.claude/projects/<X>/` (a `TODO.md` and an optional `CLAUDE.md` / `memory/` folder). It degrades gracefully when those don't exist: it just reports what it can find from git and open PRs. Paths are derived from `$HOME`, so it works on any machine without editing.
 - `/instruct` expects instruction files in `~/.claude/instructions/`. Create that folder and drop `.md` files in it, then run `/instruct <name>`. An instruction file can also take an argument: run `/instruct <path-to-file> <argument>` and everything after the path is passed to the file rather than read as part of its name. Use it for a file written to work on a target you name at call time, such as a plan path, a goal, or a mode. You can also skip the file: type the work as a sentence or a paragraph, and when nothing in the folder matches, `/instruct` takes your words as the instruction and plans against them verbatim. It says so in one line before it starts, and it asks rather than guessing when the text could be read either way.
+- `/keep-alive` saves the session by following the `save-context` skill from [multi-phase-skills-framework](https://github.com/eranw2000/multi-phase-skills-framework). Without it installed, the timer still reports and stops by itself, and says the save was skipped. The timer lives only in the session that started it: closing the session ends it, and it expires by itself after 7 days.
 - The commands are read-only by design except for one explicit, confirmed action (`/new-session` may offer to append uncaptured items to your `TODO.md`, only after you say yes).
 
 ## License
