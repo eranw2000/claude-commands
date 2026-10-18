@@ -42,7 +42,7 @@ Argument: `$ARGUMENTS` (blank means `start`).
 ## tick
 
 Do only this. Start no other work from a tick, and answer with three lines: `Done:` what
-finished, `Now:` what is still running, `You:` what the user must do, or "nothing".
+finished, `Now:` what is still running, `You:` what the user must do ("nothing yet, I'm still working" only while work runs).
 
 1. **What is still running.** Read `~/.claude/skills/agent-health/SKILL.md` in full and follow its
    steps 1 to 3 as written, including `--ping-when-done` (it arms at most ONE watcher per
@@ -61,7 +61,7 @@ finished, `Now:` what is still running, `You:` what the user must do, or "nothin
      naming the one action, and stop. Do not save, keep ticking.
    - **Something is still running** (`WORKING`, `WAITING`, `JUST WOKE`, a first `STALLED`, or
      any running item from step 1): answer with the three lines only (`Done:`, `Now:` naming
-     each running item, `You: nothing`). Do not save. Stop.
+     each running item, `You: nothing yet, I'm still working`). Do not save. Stop.
    - **Nothing is running and nothing needs the user:** go on.
 4. **Has the user written since the previous check?** Look for a genuine message from the user
    after the previous `/keep-alive tick` turn or finish-notice check, whichever is later. A
@@ -76,10 +76,10 @@ finished, `Now:` what is still running, `You:` what the user must do, or "nothin
    installed.
 6. **Switch off.** `CronList`, then `CronDelete` the `/keep-alive tick` job, because there is
    nothing left to wait for. Then write, in bold:
-   `**DONE: all agents and background commands finished, keep-alive stopped. You: nothing (run /keep-alive to start it again)**`
+   `**DONE: all agents and background commands finished, keep-alive stopped. You: your turn. Pick what's next: start the next task, or run /keep-alive to watch new work.**`
    One exception: on a finish-notice check where step 4 found the user active, leave the job in
    place (they are about to start more work) and write
-   `**DONE: the last background job finished and the session is saved. Keep-alive stays on while you work. You: nothing**`
+   `**DONE: the last background job finished and the session is saved. Keep-alive stays on while you work. You: your turn. Start the next task when you are ready.**`
 
 ## finish notice
 
