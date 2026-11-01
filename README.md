@@ -14,6 +14,8 @@ Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw
 
 ## Install
 
+**On Windows:** install [Git for Windows](https://git-scm.com/downloads/win), so Claude Code runs these scripts in Git Bash. Where a command here says `python3` and your PC has only `python`, use `python`. In WSL, follow the Linux steps.
+
 ### Commands
 
 Copy the command files into your Claude Code commands directory:
