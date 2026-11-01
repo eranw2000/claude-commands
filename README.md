@@ -14,6 +14,8 @@ Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw
 
 ## Install
 
+**On Windows:** install [Git for Windows](https://git-scm.com/downloads/win), so Claude Code runs these scripts in Git Bash. Where a command here says `python3` and your PC has only `python`, use `python`. In WSL, follow the Linux steps.
+
 ### Commands
 
 Copy the command files into your Claude Code commands directory:
@@ -42,7 +44,7 @@ It needs Python 3 and runs on macOS (it reads `ps`, `lsof` and the `pmset` power
 
 The status line replaces the old manual "run /context" step in `/new-session`: instead of asking, your context usage shows continuously.
 
-1. Install `jq` if you don't have it (`brew install jq` on macOS, `apt install jq` on Debian/Ubuntu). The script uses it to parse the session JSON Claude Code pipes in.
+1. Install `jq` if you don't have it (`brew install jq` on macOS, `apt install jq` on Debian/Ubuntu, `winget install jqlang.jq` on Windows). The script uses it to parse the session JSON Claude Code pipes in.
 2. Copy the script and make it executable:
    ```bash
    cp statusline.sh ~/.claude/statusline.sh

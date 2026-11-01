@@ -24,6 +24,12 @@ detached watcher per folder (state in ~/.local/state/agent-health/) and returns.
 (AGENT_HEALTH_SOUND, default Glass). It gives up after --max-hours and says so.
 """
 import argparse
+import sys
+# Read and write UTF-8 on every OS: the Windows default code page misreads it.
+if __name__ == "__main__":
+    for _stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8", errors="replace")
 import datetime as dt
 import glob
 import json
@@ -44,7 +50,7 @@ IDLE_CHILDREN = re.compile(r"mcp|context7|npm exec|/bin/zsh -c source .*shell-sn
 
 def sh(args, timeout=60):
     try:
-        return subprocess.run(args, capture_output=True, text=True, timeout=timeout).stdout
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace").stdout
     except Exception:
         return ""
 
@@ -135,7 +141,7 @@ def transcript_head(path):
     """(first timestamp, entrypoint) of a session transcript."""
     first, entry = None, ""
     try:
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             for i, line in enumerate(fh):
                 if i > 40:
                     break
@@ -197,7 +203,7 @@ def pending_background(path):
     """
     background_calls, started, done = {}, {}, set()
     try:
-        lines = open(path, errors="replace")
+        lines = open(path, errors="replace", encoding="utf-8")
     except OSError:
         return []
     with lines:
@@ -269,7 +275,7 @@ def watch(project_dir, poll, max_hours):
     """Wait until no headless run is left in the folder (two empty polls in a row), then ping once."""
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
-        with open(state_file(project_dir), "w") as fh:
+        with open(state_file(project_dir), "w", encoding="utf-8", newline="") as fh:
             json.dump({"pid": os.getpid(), "armed": stamp(dt.datetime.now(UTC))}, fh)
     except OSError:
         pass
@@ -301,16 +307,16 @@ def arm(project_dir, procs, poll, max_hours):
     os.makedirs(STATE_DIR, exist_ok=True)
     sf = state_file(project_dir)
     try:
-        w = json.load(open(sf))
+        w = json.load(open(sf, encoding="utf-8"))
         if "agent_health.py" in procs.get(w["pid"], {}).get("cmd", ""):
             return f"PING ALREADY ARMED: watcher pid {w['pid']}, armed {w['armed']}"
     except (OSError, ValueError, KeyError, TypeError):
         pass
     # Written BEFORE the watcher starts: a watcher that finishes fast removes this file, and a write after the
     # spawn would then leave a stale one. The watcher records its own pid in it when it starts.
-    with open(sf, "w") as fh:
+    with open(sf, "w", encoding="utf-8", newline="") as fh:
         json.dump({"pid": None, "armed": stamp(NOW)}, fh)
-    log = open(sf[:-5] + ".log", "a")
+    log = open(sf[:-5] + ".log", "a", encoding="utf-8", newline="")
     p = subprocess.Popen([sys.executable, os.path.abspath(__file__), project_dir, "--watch",
                           "--poll", str(poll), "--max-hours", str(max_hours)],
                          stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
@@ -319,6 +325,9 @@ def arm(project_dir, procs, poll, max_hours):
 
 
 def main():
+    if os.name == "nt":
+        print("agent-health reads ps and lsof, so it runs on macOS and Linux.")
+        return 2
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("project_dir", nargs="?", default=os.getcwd(),
                     help="the Claude project directory the work was launched from (default: current directory)")
