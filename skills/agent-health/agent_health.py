@@ -26,9 +26,10 @@ detached watcher per folder (state in ~/.local/state/agent-health/) and returns.
 import argparse
 import sys
 # Read and write UTF-8 on every OS: the Windows default code page misreads it.
-for _stream in (sys.stdin, sys.stdout, sys.stderr):
-    if hasattr(_stream, "reconfigure"):
-        _stream.reconfigure(encoding="utf-8", errors="replace")
+if __name__ == "__main__":
+    for _stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8", errors="replace")
 import datetime as dt
 import glob
 import json
@@ -325,8 +326,7 @@ def arm(project_dir, procs, poll, max_hours):
 
 def main():
     if os.name == "nt":
-        print("agent-health runs on macOS and Linux only: it reads ps and lsof. "
-              "On Windows it cannot tell whether an agent is alive, so it reports nothing.")
+        print("agent-health reads ps and lsof, so it runs on macOS and Linux.")
         return 2
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("project_dir", nargs="?", default=os.getcwd(),

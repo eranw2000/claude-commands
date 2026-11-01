@@ -44,7 +44,7 @@ It needs Python 3 and runs on macOS (it reads `ps`, `lsof` and the `pmset` power
 
 The status line replaces the old manual "run /context" step in `/new-session`: instead of asking, your context usage shows continuously.
 
-1. Install `jq` if you don't have it (`brew install jq` on macOS, `apt install jq` on Debian/Ubuntu). The script uses it to parse the session JSON Claude Code pipes in.
+1. Install `jq` if you don't have it (`brew install jq` on macOS, `apt install jq` on Debian/Ubuntu, `winget install jqlang.jq` on Windows). The script uses it to parse the session JSON Claude Code pipes in.
 2. Copy the script and make it executable:
    ```bash
    cp statusline.sh ~/.claude/statusline.sh
