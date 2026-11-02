@@ -37,6 +37,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 
 UTC = dt.timezone.utc
@@ -173,11 +174,62 @@ def sessions(project_dir, hours):
         out.append({"id": sid, "path": f, "last": last, "first": first, "entry": entry,
                     "helpers": len(subs), "helper_last": sub_last,
                     "pending": pending_background(f)})
+        out[-1]["pending"], out[-1]["ended"] = split_pending(out[-1]["pending"])
     return sorted(out, key=lambda s: s["last"], reverse=True)
 
 
 BG_STARTED = re.compile(r"Command running in background with ID: ([A-Za-z0-9]+)")
 TASK_ID = re.compile(r"<task-id>([A-Za-z0-9]+)</task-id>")
+BG_OUTPUT = re.compile(r"Output is being written to: (.+?\.output)")
+_LSOF_SEES = None
+
+
+def _lsof_sees():
+    """True when lsof can see a file THIS process holds open. A sandboxed or broken lsof
+    finds no holder for anything, which must read as "cannot tell", never as "nobody holds it"."""
+    global _LSOF_SEES
+    if _LSOF_SEES is None:
+        try:
+            with tempfile.NamedTemporaryFile() as held:
+                r = subprocess.run(["lsof", "-t", "--", held.name], capture_output=True, text=True, timeout=30)
+            _LSOF_SEES = r.returncode == 0 and str(os.getpid()) in r.stdout.split()
+        except Exception:
+            _LSOF_SEES = False
+    return _LSOF_SEES
+
+
+def output_open(path):
+    """Is any process holding this background command's output file? True, False, or None for
+    cannot tell. A running command holds it as stdout and stderr (on a run_in_background call,
+    the shell and its child both, FD 1w and 2w).
+
+    man lsof: "Lsof returns a one (1) if any error was detected, including the failure to locate
+    ... files"; "It returns a zero (0) if no errors were detected and if it was able to list some
+    information about all the specified search arguments." So 1 alone does not mean free. On an
+    existing file with no holder it exits 1 and prints nothing on either stream, and an error
+    prints to stderr, which is what the empty-stderr test tells apart."""
+    if not path:
+        return None
+    if not os.path.exists(path):
+        return False
+    try:
+        r = subprocess.run(["lsof", "-t", "--", path], capture_output=True, text=True, timeout=30)
+    except Exception:
+        return None
+    if r.returncode == 0 and r.stdout.strip():
+        return True
+    if r.returncode == 1 and not r.stdout.strip() and not r.stderr.strip() and _lsof_sees():
+        return False
+    return None
+
+
+def split_pending(rows):
+    """(still waiting, ended with no notice). Only a definite False ends a command: a session
+    that closed takes its commands with it and never reports, but "cannot tell" stays waiting."""
+    waiting, ended = [], []
+    for p in rows:
+        (ended if output_open(p.get("output")) is False else waiting).append(p)
+    return waiting, ended
 
 
 def _text_of(content):
@@ -198,10 +250,12 @@ def pending_background(path):
     and no `claude -p` exists for it, so this is what keeps a live suite from reading
     as NOTHING RUNNING. A start is the RESULT of a Bash call made with
     `run_in_background`; the end is a `<task-notification>` naming the same task id,
-    queued for the session or delivered in a user turn. Only those two places are read:
-    a grep whose OUTPUT happens to contain either phrase must not start or end a task.
+    queued for the session or delivered in a user turn, or the successful result of a
+    TaskStop call naming it, since a command stopped by hand gets no notice. Only those
+    places are read: a grep whose OUTPUT happens to contain either phrase must not start
+    or end a task.
     """
-    background_calls, started, done = {}, {}, set()
+    background_calls, started, done, stop_calls = {}, {}, set(), {}
     try:
         lines = open(path, errors="replace", encoding="utf-8")
     except OSError:
@@ -227,18 +281,26 @@ def pending_background(path):
                 if (block.get("type") == "tool_use"
                         and (block.get("input") or {}).get("run_in_background")):
                     background_calls[block.get("id")] = (block.get("input") or {}).get("description", "")
+                elif block.get("type") == "tool_use" and block.get("name") == "TaskStop":
+                    stop_calls[block.get("id")] = (block.get("input") or {}).get("task_id")
+                elif block.get("type") == "tool_result" and block.get("tool_use_id") in stop_calls:
+                    if not block.get("is_error"):
+                        done.add(stop_calls[block["tool_use_id"]])
                 elif block.get("type") == "tool_result" and block.get("tool_use_id") in background_calls:
-                    for tid in BG_STARTED.findall(json.dumps(block.get("content"))):
-                        started.setdefault(tid, (background_calls[block["tool_use_id"]], d.get("timestamp")))
+                    text = json.dumps(block.get("content"), ensure_ascii=False)
+                    output = BG_OUTPUT.search(text)
+                    for tid in BG_STARTED.findall(text):
+                        started.setdefault(tid, (background_calls[block["tool_use_id"]], d.get("timestamp"),
+                                                 output.group(1) if output else None))
     out = []
-    for tid, (desc, ts) in started.items():
+    for tid, (desc, ts, output) in started.items():
         if tid in done:
             continue
         try:
             when = dt.datetime.fromisoformat(ts.replace("Z", "+00:00")) if ts else None
         except ValueError:
             when = None
-        out.append({"id": tid, "description": desc, "started": when})
+        out.append({"id": tid, "description": desc, "started": when, "output": output})
     return sorted(out, key=lambda p: p["started"] or NOW)
 
 
@@ -400,6 +462,9 @@ def main():
         for p in s.get("pending", []):
             print(f"    WAITING: background command {p['id']} \"{p['description'][:80]}\" "
                   f"started {ago(p['started'])}, has not reported back")
+        for p in s.get("ended", []):
+            print(f"    ended with no finish notice: background command {p['id']} \"{p['description'][:80]}\" "
+                  f"started {ago(p['started'])}, nothing holds its output file now")
         if s.get("pending"):
             verdicts.append("WAITING")
     if not sess:
