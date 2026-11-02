@@ -1,6 +1,7 @@
 #!/bin/bash
 # Claude Code status line.
-# Shows: model, current directory + git branch, context used/remaining %
+# Shows: model (with the effort level when the model has one), current directory
+# + git branch, context used/remaining %
 # ... plus optional badges naming a skill that just ran (configurable below).
 # (color-coded green/yellow/red by fill level), tokens used vs capacity, and
 # a token gauge: green actual count under 400k, yellow past 400k, red past 600k.
@@ -14,6 +15,7 @@
 #
 # Field paths (per the Claude Code statusLine schema):
 #   .model.display_name
+#   .effort.level                           (low|medium|high|xhigh|max; absent when the model has no effort setting)
 #   .transcript_path                        (session JSONL; assistant lines carry .message.model)
 #   .workspace.current_dir                  (falls back to $PWD if absent)
 #   .context_window.used_percentage         (may be null early in a session)
@@ -30,6 +32,10 @@ RED_PCT=61         # used % at/above which it turns red
 input=$(cat)
 
 MODEL=$(echo "$input"   | jq -r '.model.display_name // "?"')
+# Effort level in effect. Claude Code statusline docs: "effort: appears only when the
+# current model supports the reasoning effort parameter", so an absent field means no
+# effort setting and the line shows nothing for it.
+EFFORT=$(echo "$input"  | jq -r '.effort.level // empty')
 TRANSCRIPT=$(echo "$input" | jq -r '.transcript_path // empty')
 DIR=$(echo "$input"     | jq -r '.workspace.current_dir // empty')
 [ -z "$DIR" ] && DIR=$PWD
@@ -292,7 +298,8 @@ fi
 # The actual token count shows green while under 400k; past 400k a yellow
 # "over 400K" flag appears, past 600k a red "over 600K".
 if [ "$TOKENS" -gt "$OVER_YELLOW" ]; then GAUGE=""; GAUGE_R=""; else GAUGE=$GREEN; GAUGE_R=$RESET; fi
-LINE="[$MODEL_DISPLAY] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · ${GAUGE}$(fmt "$TOKENS")${GAUGE_R}/$(fmt "$SIZE")"
+EFFORT_DISPLAY=""; [ -n "$EFFORT" ] && EFFORT_DISPLAY=" · $EFFORT"
+LINE="[$MODEL_DISPLAY$EFFORT_DISPLAY] ${LOC} · ${C}${USED}% used · ${REMAIN}% left${RESET} · ${GAUGE}$(fmt "$TOKENS")${GAUGE_R}/$(fmt "$SIZE")"
 if   [ "$TOKENS" -gt "$OVER_RED" ];    then LINE="$LINE · ${RED}over $(fmt "$OVER_RED")${RESET}"
 elif [ "$TOKENS" -gt "$OVER_YELLOW" ]; then LINE="$LINE · ${YELLOW}over $(fmt "$OVER_YELLOW")${RESET}"
 fi
