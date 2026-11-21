@@ -57,11 +57,17 @@ finished, `Now:` what is still running, `You:` what the user must do ("nothing y
    this session has not dealt with yet.
 3. **Decide.**
    - **Something needs the user** (agent-health says `STALLED` on two ticks in a row, a helper
-     or run failed, or anything from step 2): answer with the three lines, the `You:` line
-     naming the one action, and stop. Do not save, keep ticking.
+     or run failed, or a flow from step 2 stopped half way): answer with the three lines,
+     the `You:` line naming the one action, and stop. Do not save, keep ticking.
    - **Something is still running** (`WORKING`, `WAITING`, `JUST WOKE`, a first `STALLED`, or
      any running item from step 1): answer with the three lines only (`Done:`, `Now:` naming
      each running item, `You: nothing yet, I'm still working`). Do not save. Stop.
+   - **Only the user's answer is missing** (nothing is running, nothing else is half done, and
+     the one open item is a question waiting for the user): they may be away from the
+     computer, so the work must not stay unsaved. Run step 5 now (it saves only when the save
+     is behind, so a later tick does not save again). Then answer with the three lines, the
+     `You:` line naming the question, and stop. Skip step 6: the timer stays on, so the check
+     runs again after they answer.
    - **Nothing is running and nothing needs the user:** go on.
 4. **Has the user written since the previous check?** Look for a genuine message from the user
    after the previous `/keep-alive tick` turn or finish-notice check, whichever is later. A
