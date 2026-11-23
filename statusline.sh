@@ -307,4 +307,15 @@ BOLDBLUE=$'\033[1;34m'
 [ -n "$BADGE_KA" ] && LINE="$LINE · ${BOLDBLUE}Keep-Alive${RESET}"
 [ -n "$BADGE_A" ] && LINE="$LINE · ${BOLDBLUE}${BADGE_A_LABEL}${RESET}"
 [ -n "$BADGE_B" ] && LINE="$LINE · ${BOLDBLUE}${BADGE_B_LABEL}${RESET}"
+# Whose move it is: hooks/waiting-flag.sh sets the flag when a turn ends,
+# a question is asked or a permission prompt shows, and clears it when a message is sent or a
+# tool runs again. refreshInterval in settings.json redraws this line while nothing else does.
+BOLDYELLOW=$'\033[1;33m'
+WAIT_SID=$(basename "$TRANSCRIPT" .jsonl 2>/dev/null)
+if [ -n "$WAIT_SID" ] && [ -f "$STATE_DIR/waiting-$WAIT_SID" ]; then
+  LINE="$LINE · ${BOLDYELLOW}Waiting for your inputs...${RESET}"
+elif [ -n "$WAIT_SID" ] && [ -f "$STATE_DIR/working-$WAIT_SID" ]; then
+  # The turn ended saying "I'm still working" or "You: nothing yet".
+  LINE="$LINE · ${BOLDBLUE}I'm still working...${RESET}"
+fi
 echo "$LINE"
