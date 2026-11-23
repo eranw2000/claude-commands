@@ -5,6 +5,7 @@ Runs the real hook with HOME pointed at a temp folder.
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,10 +15,31 @@ HOOK = os.environ.get(
 SID = "11111111-2222-3333-4444-555555555555"
 
 
+def find_bash():
+    """Claude Code runs hooks in Git Bash on Windows. A plain `bash` there can be the WSL
+    launcher in System32, so take the bash.exe that ships beside git.exe first."""
+    if os.name != "nt":
+        return "bash"
+    git = shutil.which("git")
+    cands = []
+    if git:
+        root = os.path.dirname(os.path.dirname(os.path.realpath(git)))
+        cands.append(os.path.join(root, "bin", "bash.exe"))
+    cands.append(os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"),
+                              "Git", "bin", "bash.exe"))
+    for c in cands:
+        if os.path.isfile(c):
+            return c
+    return "bash"
+
+
+BASH = find_bash()
+
+
 def run(mode, event, msg, home):
     data = {"session_id": SID, "hook_event_name": event, "last_assistant_message": msg}
     env = dict(os.environ, HOME=home)
-    subprocess.run(["bash", HOOK, mode], input=json.dumps(data), text=True,
+    subprocess.run([BASH, HOOK, mode], input=json.dumps(data), text=True,
                    env=env, check=True, timeout=30)
     d = os.path.join(home, ".claude", ".statusline-state")
     return (os.path.exists(os.path.join(d, "waiting-" + SID)),
