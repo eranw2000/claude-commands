@@ -11,6 +11,7 @@ Source: [docs/commands-flow.drawio](docs/commands-flow.drawio) (editable in draw
 - **`/keep-alive`**: a session timer for long background work. Every 30 minutes it checks the helper agents, background commands and headless runs this session started, and reports them in three lines. Each check is a turn, so it also keeps the session's prompt cache warm while you wait. Once everything has finished and you have not written since the last check, it saves the session with `/save-context` and switches itself off. `/keep-alive stop` ends it early.
 - **`agent-health`** (skill): answers "is the work still moving, and should I wait?" for one project folder. It finds the headless `claude -p` runs started there, their helper agents and child processes, and any background command a session started that has not reported back, and reads the Mac's last wake from sleep so a laptop that was closed does not look like a hang. Each run gets a verdict: WORKING, WAITING, JUST WOKE or STALLED. With `--ping-when-done` it also starts one watcher that shows a macOS notification and plays a sound when the last run in the folder ends. `/keep-alive` uses it on every tick.
 - **`statusline.sh`** — prints e.g. `[Opus 5] claude-commands (main) · 37% used · 63% left · 74K/200K` (model, current directory and git branch, context used and remaining percentage, and the in-window token count vs capacity) so your usage is always visible at the bottom of the terminal. Two parts are color-coded. The context percentage is green below 40% used, yellow from 40 to 60%, and red above 60%. The token count is a gauge of the same kind: green while under 400K, a yellow `over 400K` flag once it passes 400K, and a red `over 600K` past 600K (those flags only appear in extended-context sessions, where the window is larger than 400K). The cutoffs (`YELLOW_PCT`, `RED_PCT`, `OVER_YELLOW`, `OVER_RED`) are variables at the top of the script; change them to retarget the colors and flags. The model shown is the one that actually produced the last reply, read from the session transcript, not just the session setting. A skill or command whose frontmatter pins a different model shows as `[Opus 5→Sonnet 5]` while it is active and reverts on the next plain turn, so a per-turn override is visible instead of silent.
+- **`hooks/waiting-flag.sh`** (optional, pairs with the status line): adds `Waiting for your inputs...` to the status line when the session needs you, and `I'm still working...` when the last turn ended while background work still runs. See "Whose move it is" below.
 
 ## Install
 
@@ -100,6 +101,41 @@ The skill's own steps never withdraw its own badge, including a report it prints
 and any agent it spawns. Verdicts are cached per session, and each redraw reads
 only the transcript bytes added since the last one, so a long session costs about
 the same as a short one.
+
+#### Whose move it is (optional)
+
+With `hooks/waiting-flag.sh` installed, the status line ends with one of two labels:
+
+- `Waiting for your inputs...` when a turn ends, Claude asks you a question, or a permission prompt shows.
+- `I'm still working...` when the turn ended with a message saying "I'm still working", or with a line `You: nothing yet` (Markdown bold is fine). This fits a CLAUDE.md that asks Claude to end each turn with a `You:` line saying what you must do next.
+
+Both labels go away when you send a message or a tool runs again.
+
+1. Copy the hook:
+   ```bash
+   mkdir -p ~/.claude/hooks
+   cp hooks/waiting-flag.sh ~/.claude/hooks/waiting-flag.sh
+   ```
+2. Merge this into `~/.claude/settings.json`. The `refreshInterval` redraws the status line every 10 seconds, so a label changes even while nothing else happens:
+   ```json
+   {
+     "statusLine": {
+       "type": "command",
+       "command": "bash ~/.claude/statusline.sh",
+       "refreshInterval": 10
+     },
+     "hooks": {
+       "Stop": [{"hooks": [{"type": "command", "command": "bash $HOME/.claude/hooks/waiting-flag.sh set", "timeout": 5}]}],
+       "Notification": [{"matcher": "permission_prompt|agent_needs_input|elicitation_dialog", "hooks": [{"type": "command", "command": "bash $HOME/.claude/hooks/waiting-flag.sh set", "timeout": 5}]}],
+       "PreToolUse": [{"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "bash $HOME/.claude/hooks/waiting-flag.sh set", "timeout": 5}]}],
+       "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "bash $HOME/.claude/hooks/waiting-flag.sh clear", "timeout": 5}]}],
+       "PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": "bash $HOME/.claude/hooks/waiting-flag.sh clear", "timeout": 5}]}]
+     }
+   }
+   ```
+   If you already have hooks for these events, add these entries to your existing lists.
+
+The hook never blocks and never prints. It keeps one empty file per session in `~/.claude/.statusline-state/`. Its test runs the real hook in a temp folder: `python3 hooks/tests/test_waiting_flag.py` (set `HOOK_UNDER_TEST` to test a copy somewhere else).
 
 ## Notes
 

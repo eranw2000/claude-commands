@@ -23,15 +23,19 @@ State the resolved project, the path to its `TODO.md` (`~/.claude/projects/<X>/T
 
 ## Part 1: Open TODO items (this project)
 
+**When Read refuses `TODO.md` as too large, read the pin BEFORE anything else:** `grep -n 'NEXT SESSION\|^## ' <file>`, then Read that block by `offset` and `limit`. A later message naming work ("re-run the scan") is answered by the command in that block, so it has to be in front of you first.
+
 Read `~/.claude/projects/<X>/TODO.md`. Render the **open** (unchecked `- [ ]`) items, grouped by the buckets the file actually uses (honor any non-canonical bucket labels or extra buckets a curated file has; render a pin block first if present). Lead with a one-line count summary (e.g. "3 active, 1 queued, 1 parked"). Skip struck/`- [x]` items.
 
 Surface due dates against today's date (today is in the session context): annotate `OVERDUE` if past, `due in Nd` if within 7 days. Recognize the `(due YYYY-MM-DD)` suffix and prose `Due YYYY-MM-DD` / `by YYYY-MM-DD` forms. The annotation is for display only; do not write it into the file.
+
+**Take due dates and counts from the whole file, whatever you then show:** `grep -nE '^\s*- \[ \].*([Dd]ue|by) 20[0-9]{2}-[0-9]{2}-[0-9]{2}' <TODO.md>` and a count per bucket that includes a Parked bucket's plain bullets. For a long file, show the top items per bucket and say how many you left out. Done when every due date is flagged and the count covers every bucket.
 
 If no `TODO.md` exists, say so.
 
 ## Part 2: Open action items NOT in the TODO list
 
-Sweep the sources below for open/pending work, then **reconcile against Part 1**: drop anything already represented in `TODO.md` (substring or clear semantic match) and present only what is uncaptured. The goal is to catch loose ends the TODO doesn't know about. Run the read-only commands in parallel where possible; tolerate missing tools (skip a source silently if its tool/file is absent).
+Sweep the sources below for open/pending work, then **reconcile against Part 1**: drop anything already represented in `TODO.md` (substring or clear semantic match) and present only what is uncaptured. The goal is to catch loose ends the TODO doesn't know about. **Before an item goes on that list, search the whole TODO for it** with `grep -n -i -F -- '<PR number, branch or word>' <TODO.md>`, reading the full output with no `head`, `cut` or line limit in front of it. A hit means it is tracked, and it can sit on a Parked bullet with no checkbox. Done when each uncaptured item has a search with no hits behind it. Run the read-only commands in parallel where possible; tolerate missing tools (skip a source silently if its tool/file is absent).
 
 1. **Project CLAUDE.md**: scan for pending work in sections like "Still blocked", "Open questions", "Next steps", "Deferred", "TODO", and any gotcha that names an unresolved action. Pull the open ones.
 2. **Project memory** (if you keep one): the memory files that name this project, `find ~/.claude/projects -maxdepth 3 -path '*/memory/*.md' -exec grep -liF -- "<x>" {} +` (**every store, never one**: a store follows the session's launch directory, so reading a single one misses the memories written from anywhere else). In the files it returns, look for: any "awaiting", "blocked on", "pending", or unfinished-decision items. Skip if no memory folder exists.
@@ -49,7 +53,7 @@ Keep it scannable and short, one screen if possible:
 
 1. Resolved project and file paths (one line).
 2. **In TODO**: open items by bucket, with due-date flags.
-3. **Open, not in TODO**: uncaptured items with source tags, or "nothing uncaptured".
+3. **Open, not in TODO**: uncaptured items with source tags, or "nothing uncaptured". Then one line naming each source that exists and that you did not run.
 4. A closing line: if Part 2 found uncaptured items, offer to add them to `TODO.md` (ask first; do not add unprompted). Otherwise suggest the single most sensible next action based on what you found.
 
 Do not pad the briefing with restated CLAUDE.md detail; link or point rather than copy. Follow plain-prose conventions (no em dashes in your own prose, no box-drawing characters in any table).
